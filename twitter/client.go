@@ -2,15 +2,24 @@ package twitter
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 )
 
+type OauthResponse struct {
+	TokenType   string `json:"token_type"`
+	AccessToken string `json:"access_token"`
+}
+
+// Client is http client for twitter api.
+// This contains authentication information.
 type Client struct {
 	apiKey string
 	token  string
@@ -55,10 +64,59 @@ func (c *Client) GetAccessToken() error {
 		return err
 	}
 	defer res.Body.Close()
+	log.Println(fmt.Sprintf("%d:%s\n", res.StatusCode, res.Status))
+
 	respBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
+
+	log.Println(string(respBody))
+
+	var authToken OauthResponse
+	if err := json.Unmarshal(respBody, &authToken); err != nil {
+		return err
+	}
+	log.Println(authToken.AccessToken)
+
+	c.token = authToken.AccessToken
+
+	return nil
+}
+
+// SearchTweets get tweets with searching by given query string.
+//
+func (c *Client) SearchTweets(query string) error {
+	urlStr := "https://api.twitter.com/1.1/search/tweets.json"
+
+	v := url.Values{}
+	v.Add("q", query)
+	v.Add("count", "100")
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	// Get request doesn't pass query to URL.
+	// query values have to be set directly
+	req.URL.RawQuery = v.Encode()
+
+	if err != nil {
+		return err
+	}
+
+	log.Println(c.token)
+	req.Header.Add("Authorization", "Bearer "+c.token)
+	log.Println(req)
+
+	res, err := c.c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	log.Println(fmt.Sprintf("%d:%s\n", res.StatusCode, res.Status))
+	respBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
 	fmt.Println(string(respBody))
 	return nil
 }
