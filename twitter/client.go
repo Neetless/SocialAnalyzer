@@ -1,10 +1,12 @@
 package twitter
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -299,6 +301,7 @@ func (c *Client) SearchTweets(query string) error {
 	v := url.Values{}
 	v.Add("q", query)
 	v.Add("count", "100")
+	v.Add("result_type", "recent")
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	// Get request doesn't pass query to URL.
@@ -327,7 +330,7 @@ func (c *Client) SearchTweets(query string) error {
 	if err := json.Unmarshal(respBody, &s); err != nil {
 		return err
 	}
-	s.show()
+	s.toTsv("test.tsv")
 	return nil
 }
 
@@ -339,6 +342,46 @@ func (s *SearchResponse) show() {
 		userIdStr := status.User.IdStr
 		fmt.Printf("%s\t%s\t%s\t%s\n", createdAt, idStr, text, userIdStr)
 	}
+}
+
+func (s SearchResponse) toCsv(filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	s.toWriter(w, ",")
+	w.Flush()
+	return nil
+}
+
+func (s SearchResponse) toTsv(filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	s.toWriter(w, ",\t")
+	w.Flush()
+	return nil
+}
+
+func (s SearchResponse) toWriter(w io.Writer, sep string) {
+	for _, t := range s.Statuses {
+		strs := []string{
+			addQuote(t.IdStr),
+			addQuote(""),
+			addQuote(strings.Replace(t.Text, "\n", " ", -1)),
+		}
+		line := strings.Join(strs, sep)
+		fmt.Fprint(w, line+"\n")
+	}
+}
+
+func addQuote(str string) string {
+	return "\"" + str + "\""
 }
 
 func urlEncode(s string) string {
