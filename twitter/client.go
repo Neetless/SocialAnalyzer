@@ -301,7 +301,7 @@ func (c *Client) SearchTweets(query string) error {
 	v := url.Values{}
 	v.Add("q", query)
 	v.Add("count", "100")
-	v.Add("result_type", "recent")
+	//v.Add("result_type", "popular")
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	// Get request doesn't pass query to URL.
@@ -372,6 +372,7 @@ func (s SearchResponse) toWriter(w io.Writer, sep string) {
 	for _, t := range s.Statuses {
 		strs := []string{
 			addQuote(t.IdStr),
+			addQuote(t.CreatedAt),
 			addQuote(""),
 			addQuote(strings.Replace(t.Text, "\n", " ", -1)),
 		}

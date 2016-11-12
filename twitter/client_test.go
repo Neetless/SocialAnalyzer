@@ -51,7 +51,7 @@ func TestSearchTweets(t *testing.T) {
 		t.Errorf("%v\n", err)
 	}
 
-	query := "楽天銀行 -RT"
+	query := "\"楽天銀行\" -RT"
 	if err := c.SearchTweets(query); err != nil {
 		t.Errorf("%v\n", err)
 	}
